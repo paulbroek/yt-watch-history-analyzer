@@ -1,28 +1,50 @@
-import youtube
-# from googleapiclient.discovery import build
+"""__main__.py.
+
+Connect to YouTube API, 
+retrieve recently watched videos
+"""
+import sys
+from pathlib import Path
+
 from apiclient.discovery import build  # type: ignore[import]
+# from googleapiclient.discovery import build
+from yt_watch_history_analyzer import config as config_dir
+
+from .settings import CONFIG_FILE
+from .utils.misc import load_yaml
 
 # from google.oauth2.credentials import Credentials
 
 # Replace "YOUR_API_KEY" with your actual API key
 # creds = Credentials.from_authorized_user_info(info={"apiKey": "YOUR_API_KEY"})
 
-youtube_api = build("youtube", "v3", developerKey=api_key)
+p = Path(config_dir.__file__)
+cfgFile = p.with_name(CONFIG_FILE)
+
+config = load_yaml(cfgFile)
+
+youtube_api = build("youtube", "v3", developerKey=config["api_key"])
 
 # Replace "YOUR_QUERY" with your search query (e.g. "videos I watched this week")
-results = youtube.search().list(
-   	part="id",
-    q="YOUR_QUERY",
-    type="video",
-    fields="items(id)"
-).execute()
+results = (
+    youtube_api.search()
+    .list(part="id", q="messi", type="video", fields="items(id)")
+    .execute()
+)
+
+print(results)
+sys.exit()
 
 # Replace "YOUR_VIDEO_ID" with the ID of the video you want to retrieve information for
-video_info = youtube.videos().list(
-    part="contentDetails",
-    id="YOUR_VIDEO_ID",
-    fields="items(contentDetails(duration))"
-).execute()
+video_info = (
+    youtube_api.videos()
+    .list(
+        part="contentDetails",
+        id="YOUR_VIDEO_ID",
+        fields="items(contentDetails(duration))",
+    )
+    .execute()
+)
 
 total_time_watched = 0
 
