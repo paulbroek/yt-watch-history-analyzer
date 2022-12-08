@@ -23,3 +23,15 @@ install:
 .PHONY: image
 install: 
 	docker build . 
+
+venv:
+ pip install pip-tools
+ pip-compile requirements.in
+ pip install -r requirements.txt
+
+check_compile:
+ pip-compile --quiet requirements.in && git diff --exit-code
+ 
+build: | venv
+ pip install setuptools wheel
+ python setup.py sdist bdist_wheel

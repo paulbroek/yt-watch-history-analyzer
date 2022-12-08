@@ -8,6 +8,7 @@ __pycache__/
 
 config.yaml
 *googleusercontent.com.json
+client_secrets.json
 
 # Distribution / packaging
 .Python

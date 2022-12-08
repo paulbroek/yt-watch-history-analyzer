@@ -4,17 +4,16 @@ Connect to YouTube API,
 retrieve recently watched videos
 
 Run: 
+    cd ~/repos/yt-watch-history-analyzer 
+    ipy yt_watch_history_analyzer/scripts/watch_history.py
 
 
 """
+import pprint
 import sys
-from pathlib import Path
 
 from apiclient.discovery import build  # type: ignore[import]
-from google.oauth2.credentials import Credentials, UserAccessTokenCredentials
-from oauth2client import client, file, tools  # type: ignore[import]
-# from google.oauth2.flow import Flow
-from yt_watch_history_analyzer import config as config_dir
+from google_auth_oauthlib.flow import InstalledAppFlow
 from yt_watch_history_analyzer.utils.misc import load_yaml
 
 cfgFile = "/home/paul/repos/yt-watch-history-analyzer/yt_watch_history_analyzer/config/config.yaml"
@@ -22,31 +21,50 @@ cfgFile = "/home/paul/repos/yt-watch-history-analyzer/yt_watch_history_analyzer/
 config = load_yaml(cfgFile)
 
 # Set the authorization scope
-SCOPES = "https://www.googleapis.com/auth/youtube.force-ssl"
+# copy scopes from console.cloud.google.com/apis/credentials/consent/edit?project=YOUR_PROJECT_ID
+SCOPES = [
+    "https://www.googleapis.com/auth/youtube",
+    "https://www.googleapis.com/auth/youtube.force-ssl",
+    "https://www.googleapis.com/auth/youtubepartner",
+]
+# SCOPES = None
 
 # Set the redirect URI
 REDIRECT_URI = "http://localhost"
 
-# DEPRECIATED?
-# Create the OAuth flow object
-# flow = Flow.from_client_secrets_file(
-#     client_secrets_file=config["client_secret_file"],
-#     scope=SCOPE,
-#     redirect_uri=REDIRECT_URI
-# )
-flow = client.flow_from_clientsecrets(config["client_secret_file"], SCOPES)
-
-# for personal data, you need to create a credentials object
-# TODO: pass scopes needed for private youtube data?
-# scopes = None
-# creds = Credentials.from_authorized_user_info(
-#     info={"client_id": config["client_id"], "client_secret": config["client_secret"]},
-#     scopes=scopes,
-# )
-# creds = Credentials(client_id=config["client_id"], client_secret=config["client_secret"])
-# creds = Credentials.from_authorized_user_file("/home/paul/Downloads/google-services.json")
+flow = InstalledAppFlow.from_client_secrets_file(config["client_secret_file"], scopes=SCOPES)
+flow.run_local_server(port=8080, prompt='consent', authorization_prompt_message='')
+creds = flow.credentials
+# use this when only using public API
 # youtube_api = build("youtube", "v3", developerKey=config["api_key"])
+# use this when only using private user data
 youtube_api = build("youtube", "v3", credentials=creds)
+
+myChannelId = config["my_channel_id"]
+# cid="@coreyms"
+# results = youtube_api.activities().list(channelId=cid, part="contentDetails").execute()
+
+# get some activity, like subscribing to channels, ...
+results = youtube_api.activities().list(mine=True, part="contentDetails").execute()
+
+# get playlists, show them in alphabetical order
+results = youtube_api.playlists().list(mine=True, part="snippet", maxResults=50).execute()
+pprint.pprint(sorted([a['snippet']['title'] for a in results['items']]))
+
+# TODO: get my watch history playlist, how?
+# see: https://developers.google.com/youtube/v3/docs
+# results = youtube_api.channels().list(mine=True, part="contentDetails").execute()
+# plId = "???"
+# results = youtube_api.channels().playlistItems(mine=True, playlistId=plId, part="snippet").execute()
+# or try a different approach, use Search endpoint, and filter for "completed": true
+results = (
+    youtube_api.search()
+    .list(part="id", q="messi", type="video", fields="items(id)", eventType="completed", order="date")
+    .execute()
+)
+
+# -> Nope, the best approach still seem google Takeout. Automate the hell out of it and run daily job!
+
 
 # Replace "YOUR_QUERY" with your search query (e.g. "videos I watched this week")
 results = (
