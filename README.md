@@ -15,6 +15,15 @@ client_secret: ...
 client_secret_file: ...
 ```
 
+or sync the config dir from/to server
+
+```bash
+# syncing .env.test file, update .env first with server details
+~/.yarn/bin/dotenv -e .env make sync_config_to_server
+~/.yarn/bin/dotenv -e .env make sync_config_to_here
+
+```
+
 ## 0.2 Dev config
 
 ```

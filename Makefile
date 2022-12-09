@@ -21,17 +21,24 @@ install:
 	pip install -U .
 
 .PHONY: image
-install: 
+image: 
 	docker build . 
 
 venv:
- pip install pip-tools
- pip-compile requirements.in
- pip install -r requirements.txt
+	pip install pip-tools
+	pip-compile requirements.in
+	pip install -r requirements.txt
 
 check_compile:
- pip-compile --quiet requirements.in && git diff --exit-code
- 
+	pip-compile --quiet requirements.in && git diff --exit-code
+
 build: | venv
- pip install setuptools wheel
- python setup.py sdist bdist_wheel
+	pip install setuptools wheel
+	python setup.py sdist bdist_wheel
+
+CONFIG_DIR := ~/repos/yt-watch-history-analyzer/yt_watch_history_analyzer/config
+sync_config_to_here:
+	rsync -avz -e ssh $(SERVER_USER)@$(SERVER_ADDR):$(CONFIG_DIR)/ $(CONFIG_DIR)
+
+sync_config_to_server:
+	rsync -avz -e ssh $(CONFIG_DIR)/ $(SERVER_USER)@$(SERVER_ADDR):$(CONFIG_DIR)
