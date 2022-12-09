@@ -9,32 +9,57 @@ Run:
 
 
 """
+import os
+import pickle
 import pprint
 import sys
+from typing import List, Optional
 
 from apiclient.discovery import build  # type: ignore[import]
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
+from yt_watch_history_analyzer.settings import CONFIG_FILE, TOKEN_PICKLE_FILE
 from yt_watch_history_analyzer.utils.misc import load_yaml
 
-cfgFile = "/home/paul/repos/yt-watch-history-analyzer/yt_watch_history_analyzer/config/config.yaml"
-
-config = load_yaml(cfgFile)
+config = load_yaml(CONFIG_FILE)
 
 # Set the authorization scope
 # copy scopes from console.cloud.google.com/apis/credentials/consent/edit?project=YOUR_PROJECT_ID
-SCOPES = [
+SCOPES: List[str] = [
     "https://www.googleapis.com/auth/youtube",
     "https://www.googleapis.com/auth/youtube.force-ssl",
     "https://www.googleapis.com/auth/youtubepartner",
 ]
-# SCOPES = None
 
 # Set the redirect URI
-REDIRECT_URI = "http://localhost"
+# REDIRECT_URI = "http://localhost"
 
-flow = InstalledAppFlow.from_client_secrets_file(config["client_secret_file"], scopes=SCOPES)
-flow.run_local_server(port=8080, prompt='consent', authorization_prompt_message='')
-creds = flow.credentials
+creds: Optional[Credentials] = None
+if os.path.exists(TOKEN_PICKLE_FILE):
+    print("Loading credentials from pickle file...")
+    with open(TOKEN_PICKLE_FILE, "rb") as token:
+        creds = pickle.load(token)
+
+if not creds or not creds.valid:
+    if creds and creds.expired and creds.refresh_token:
+        print("Refreshing Access Token...")
+        creds.refresh(Request())
+
+    else:
+        flow = InstalledAppFlow.from_client_secrets_file(
+            config["client_secret_file"], scopes=SCOPES
+        )
+        flow.run_local_server(
+            port=8080, prompt="consent", authorization_prompt_message=""
+        )
+        creds = flow.credentials
+
+        # save OAuth credentials for the next run
+        with open(TOKEN_PICKLE_FILE, "wb") as f:
+            print("Saving credentials for future use..")
+            pickle.dump(creds, f)
+
 # use this when only using public API
 # youtube_api = build("youtube", "v3", developerKey=config["api_key"])
 # use this when only using private user data
@@ -48,8 +73,10 @@ myChannelId = config["my_channel_id"]
 results = youtube_api.activities().list(mine=True, part="contentDetails").execute()
 
 # get playlists, show them in alphabetical order
-results = youtube_api.playlists().list(mine=True, part="snippet", maxResults=50).execute()
-pprint.pprint(sorted([a['snippet']['title'] for a in results['items']]))
+results = (
+    youtube_api.playlists().list(mine=True, part="snippet", maxResults=50).execute()
+)
+pprint.pprint(sorted([a["snippet"]["title"] for a in results["items"]]))
 
 # TODO: get my watch history playlist, how?
 # see: https://developers.google.com/youtube/v3/docs
@@ -59,7 +86,14 @@ pprint.pprint(sorted([a['snippet']['title'] for a in results['items']]))
 # or try a different approach, use Search endpoint, and filter for "completed": true
 results = (
     youtube_api.search()
-    .list(part="id", q="messi", type="video", fields="items(id)", eventType="completed", order="date")
+    .list(
+        part="id",
+        q="messi",
+        type="video",
+        fields="items(id)",
+        eventType="completed",
+        order="date",
+    )
     .execute()
 )
 

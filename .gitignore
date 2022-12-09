@@ -9,6 +9,7 @@ __pycache__/
 config.yaml
 *googleusercontent.com.json
 client_secrets.json
+token.pickle
 
 # Distribution / packaging
 .Python
