@@ -21,7 +21,6 @@ or sync the config dir from/to server
 # syncing .env.test file, update .env first with server details
 ~/.yarn/bin/dotenv -e .env make sync_config_to_server
 ~/.yarn/bin/dotenv -e .env make sync_config_to_here
-
 ```
 
 ## 0.2 Dev config
@@ -44,5 +43,9 @@ pip install -U .
 
 ```bash
 # alias ipy="ipython --no-confirm-exit --no-banner -i
+# run as module
 ipy -m yt_watch_history_analyzer
+
+# run as script
+ipy yt_watch_history_analyzer/scripts/watch_history.py
 ```
